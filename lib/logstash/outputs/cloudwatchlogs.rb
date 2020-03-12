@@ -145,7 +145,7 @@ class LogStash::Outputs::CloudWatchLogs < LogStash::Outputs::Base
       @codec.encode(event)
     else
       @buffer.enq({:timestamp => event.timestamp.time.to_f*1000,
-       :message => event[MESSAGE] })
+       :message => event.get(MESSAGE) })
     end
   end # def receive
 
@@ -190,7 +190,8 @@ class LogStash::Outputs::CloudWatchLogs < LogStash::Outputs::Base
       )
       @sequence_token = response.next_sequence_token
     rescue Aws::CloudWatchLogs::Errors::InvalidSequenceTokenException => e
-      @logger.warn(e)
+      @logger.info("Encountered InvalidSequenceTokenException.")
+      # @logger.warn(e)
       if /sequenceToken(?:\sis)?: ([^\s]+)/ =~ e.to_s
         if $1 == 'null'
           @sequence_token = nil
@@ -246,7 +247,8 @@ class LogStash::Outputs::CloudWatchLogs < LogStash::Outputs::Base
 
   private
   def invalid?(event)
-    status = event[TIMESTAMP].nil? || (!@use_codec && event[MESSAGE].nil?)
+    #status = event[TIMESTAMP].nil? || (!@use_codec && event[MESSAGE].nil?)
+	status = event.get(TIMESTAMP).nil? || (!@use_codec && event.get(MESSAGE).nil?)
     if status
       @logger.warn("Skipping invalid event #{event.to_hash}")
     end
@@ -289,7 +291,6 @@ class LogStash::Outputs::CloudWatchLogs < LogStash::Outputs::Base
   # or the batch has opend more than *buffer_duration* milliseconds and has at least one item.
 
   class Buffer
-
     CLOSE_BATCH = :close
 
     attr_reader :in_batch, :in_count, :in_size, :out_queue
